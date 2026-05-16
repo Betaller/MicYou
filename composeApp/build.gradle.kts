@@ -59,6 +59,12 @@ kotlin {
     }
     
     jvm {
+        compilerOptions {
+            // 必须显式设定，否则 kotlinc 跟随 daemon JVM 版本编译，
+            // 导致 class file 版本 > 打包 JRE 支持的版本，安装包启动报
+            // UnsupportedClassVersionError。
+            jvmTarget.set(JvmTarget.JVM_17)
+        }
         mainRun {
             mainClass.set("com.lanrhyme.micyou.MainKt")
         }
