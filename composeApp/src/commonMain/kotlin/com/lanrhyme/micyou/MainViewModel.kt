@@ -165,6 +165,7 @@ class MainViewModel : ViewModel() {
     private val settingsViewModel = SettingsViewModel()
     private val pluginViewModel = PluginViewModel()
     private val updateViewModel = UpdateViewModel()
+    val remoteInput: RemoteInputViewModel = RemoteInputViewModel()
     
     private val _uiState = MutableStateFlow(AppUiState())
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
