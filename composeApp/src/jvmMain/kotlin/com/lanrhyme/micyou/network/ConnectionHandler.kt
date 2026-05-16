@@ -35,7 +35,8 @@ class ConnectionHandler(
     private val onAudioPacketReceived: suspend (AudioPacketMessage) -> Unit,
     private val onMuteStateChanged: (Boolean) -> Unit,
     private val onPluginSyncReceived: ((PluginSyncMessage) -> Unit)? = null,
-    private val onError: (String) -> Unit
+    private val onError: (String) -> Unit,
+    private val remoteInputHandler: RemoteInputHandler? = null
 ) {
     private val CHECK_1 = "MicYouCheck1"
     private val CHECK_2 = "MicYouCheck2"
@@ -207,6 +208,10 @@ class ConnectionHandler(
                 if (wrapper.pong != null) {
                     val now = System.currentTimeMillis()
                     rtt = now - wrapper.pong.timestamp
+                }
+
+                if (wrapper.mouse != null || wrapper.key != null) {
+                    remoteInputHandler?.handle(wrapper)
                 }
             } catch (e: Exception) {
                 Logger.e("ConnectionHandler", "Failed to decode packet", e)
