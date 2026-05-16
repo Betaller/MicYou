@@ -195,6 +195,14 @@ compose.desktop {
     application {
         mainClass = "com.lanrhyme.micyou.MainKt"
         jvmArgs("-Dfile.encoding=UTF-8", "-Dapp.version=${project.property("project.version")}")
+        // 允许通过 -PjpackageJdk=<path> 指定带 jpackage 的 JDK；Android Studio 自带的 JBR
+        // 没有 jpackage，所以直接打 native distributable / EXE 会失败。
+        val jpackageJdk = providers.gradleProperty("jpackageJdk")
+            .orElse(providers.environmentVariable("JPACKAGE_JDK"))
+            .orNull
+        if (!jpackageJdk.isNullOrBlank()) {
+            javaHome = jpackageJdk
+        }
 
         nativeDistributions {
             appResourcesRootDir.set(project.layout.projectDirectory.dir("resources"))
