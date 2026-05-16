@@ -16,6 +16,7 @@ import java.util.concurrent.atomic.AtomicLong
 class RemoteInputHandler(
     private val injector: InputInjector,
     private val isEnabled: () -> Boolean,
+    private val isAuthorized: () -> Boolean = { true },
     private val sensitivity: () -> Float = { 1.0f },
     private val ratePerSecond: Int = 200,
     private val burst: Int = 20,
@@ -29,6 +30,10 @@ class RemoteInputHandler(
     fun handle(message: MessageWrapper) {
         if (message.mouse == null && message.key == null) return
         if (!isEnabled()) return
+        if (!isAuthorized()) {
+            Logger.w("RemoteInputHandler", "drop unauthorized input event")
+            return
+        }
         if (!consumeToken()) {
             warnRateLimit()
             return
