@@ -96,6 +96,8 @@ actual class AudioEngine actual constructor() {
     private val _webClientCount = MutableStateFlow(0)
     actual val webUrl: Flow<String> = _webUrl.asStateFlow()
     actual val webClientCount: Flow<Int> = _webClientCount.asStateFlow()
+
+    actual suspend fun trySendRemoteInput(wrapper: MessageWrapper): Boolean = false // server side
     
     init {
         // Start mDNS advertisement immediately so Android clients can discover this server

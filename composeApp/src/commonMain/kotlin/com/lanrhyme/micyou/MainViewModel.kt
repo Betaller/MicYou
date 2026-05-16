@@ -165,7 +165,10 @@ class MainViewModel : ViewModel() {
     private val settingsViewModel = SettingsViewModel()
     private val pluginViewModel = PluginViewModel()
     private val updateViewModel = UpdateViewModel()
-    val remoteInput: RemoteInputViewModel = RemoteInputViewModel()
+    val remoteInput: RemoteInputViewModel = RemoteInputViewModel().also { vm ->
+        // best-effort: only meaningful on the Android client side; on desktop the engine
+        // returns false from trySendRemoteInput so this is a safe no-op.
+    }
     
     private val _uiState = MutableStateFlow(AppUiState())
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
@@ -219,6 +222,11 @@ class MainViewModel : ViewModel() {
             appStringProvider = { it }
         )
         
+        // Bind RemoteInputViewModel transport to the audio engine's TCP socket
+        remoteInput.setTransport(
+            AudioEngineRemoteInputTransport(audioStreamViewModel.audioEngine, viewModelScope)
+        )
+
         // Observe and merge states from all ViewModels
         setupStateObservers()
 

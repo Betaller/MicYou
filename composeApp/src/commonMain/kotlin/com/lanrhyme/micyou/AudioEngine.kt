@@ -75,4 +75,7 @@ expect class AudioEngine() {
     // Web 模式状态（仅桌面端有效）
     val webUrl: Flow<String>
     val webClientCount: Flow<Int>
+
+    /** 客户端用：把远程键鼠 wrapper 写入既有 TCP 通道。返回 true 表示已入队。 */
+    suspend fun trySendRemoteInput(wrapper: MessageWrapper): Boolean
 }

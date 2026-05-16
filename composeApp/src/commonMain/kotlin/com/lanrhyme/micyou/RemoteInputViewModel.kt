@@ -32,6 +32,30 @@ object NoopRemoteInputTransport : RemoteInputTransport {
     override suspend fun send(message: MessageWrapper) {}
 }
 
+/** 把 AudioEngine 的现有 TCP socket 当作远程输入通道。 */
+class AudioEngineRemoteInputTransport(
+    private val audioEngine: AudioEngine,
+    scope: kotlinx.coroutines.CoroutineScope
+) : RemoteInputTransport {
+    private val _state = MutableStateFlow(RemoteInputConnectionState.Disconnected)
+    override val connectionState: StateFlow<RemoteInputConnectionState> = _state.asStateFlow()
+
+    init {
+        scope.launch {
+            audioEngine.streamState.collect { s ->
+                _state.value = when (s) {
+                    StreamState.Streaming -> RemoteInputConnectionState.Connected
+                    else -> RemoteInputConnectionState.Disconnected
+                }
+            }
+        }
+    }
+
+    override suspend fun send(message: MessageWrapper) {
+        audioEngine.trySendRemoteInput(message)
+    }
+}
+
 /**
  * Android 端远程键鼠 VM。
  * - mouseMove 在 16ms 窗口内合并（约 60 Hz），减少网络帧数
@@ -39,13 +63,20 @@ object NoopRemoteInputTransport : RemoteInputTransport {
  * - 未连接时所有 send 走 no-op
  */
 class RemoteInputViewModel(
-    private val transportProvider: () -> RemoteInputTransport = { NoopRemoteInputTransport },
+    transportProvider: () -> RemoteInputTransport = { NoopRemoteInputTransport },
     private val coalesceMillis: Long = 16L,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.Default
 ) : ViewModel() {
 
+    @Volatile
+    private var transportSupplier: () -> RemoteInputTransport = transportProvider
+
+    fun setTransport(transport: RemoteInputTransport) {
+        transportSupplier = { transport }
+    }
+
     val connectionState: StateFlow<RemoteInputConnectionState>
-        get() = transportProvider().connectionState
+        get() = transportSupplier().connectionState
 
     private val pendingMoveMutex = Mutex()
     private var pendingDx: Int = 0
@@ -112,14 +143,14 @@ class RemoteInputViewModel(
 
     private suspend fun send(message: MessageWrapper) {
         try {
-            transportProvider().send(message)
+            transportSupplier().send(message)
         } catch (t: Throwable) {
             Logger.w(TAG, "remote input send failed: ${t.message}")
         }
     }
 
     private fun isLive(): Boolean =
-        transportProvider().connectionState.value == RemoteInputConnectionState.Connected
+        transportSupplier().connectionState.value == RemoteInputConnectionState.Connected
 
     companion object {
         private const val TAG = "RemoteInputViewModel"

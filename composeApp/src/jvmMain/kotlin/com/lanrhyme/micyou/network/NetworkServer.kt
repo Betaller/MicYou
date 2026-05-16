@@ -7,6 +7,7 @@ import micyou.composeapp.generated.resources.errorRecordingPermissionDenied
 import micyou.composeapp.generated.resources.errorServerGeneric
 import micyou.composeapp.generated.resources.errorSocketError
 import org.jetbrains.compose.resources.getString
+import com.lanrhyme.micyou.input.InputInjectorFactory
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
 import io.ktor.utils.io.*
@@ -50,6 +51,18 @@ class NetworkServer(
 
     // 当前活动的连接处理器
     private var activeHandler: ConnectionHandler? = null
+
+    // 远程键鼠：注入器全局单例（启动时按平台选 JNA / Robot）
+    private val inputInjector by lazy { InputInjectorFactory.create() }
+    private val remoteInputHandler by lazy {
+        // TODO: 接入 RemoteInputAuthorizer + Settings.remoteInputEnabled UI 后改为读 Settings
+        // 当前: 默认开启、跳过授权门，方便调试。生产前必须收紧。
+        RemoteInputHandler(
+            injector = inputInjector,
+            isEnabled = { true },
+            isAuthorized = { true }
+        )
+    }
 
     suspend fun start(
         port: Int
@@ -215,7 +228,8 @@ class NetworkServer(
             onPluginSyncReceived = onPluginSyncReceived,
             onError = { error ->
                 _lastError.value = error
-            }
+            },
+            remoteInputHandler = remoteInputHandler
         )
         activeHandler = handler
         

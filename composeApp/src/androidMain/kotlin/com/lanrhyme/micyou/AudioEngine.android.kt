@@ -759,6 +759,11 @@ actual class AudioEngine actual constructor() {
 
     actual val webUrl: Flow<String> = MutableStateFlow("")
     actual val webClientCount: Flow<Int> = MutableStateFlow(0)
+
+    actual suspend fun trySendRemoteInput(wrapper: MessageWrapper): Boolean {
+        val ch = sendChannel ?: return false
+        return ch.trySend(wrapper).isSuccess
+    }
 }
 
 private class UdpCircuitBreakerException(message: String) : Exception(message)
