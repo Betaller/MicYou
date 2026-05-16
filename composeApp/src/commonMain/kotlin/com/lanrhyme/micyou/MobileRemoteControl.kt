@@ -305,6 +305,8 @@ private fun dispatch(vm: RemoteInputViewModel, cmd: GestureCommand, sensitivity:
             vm.sendMouseButton(cmd.button, pressed = true)
             vm.sendMouseButton(cmd.button, pressed = false)
         }
+        is GestureCommand.MouseButtonDown -> vm.sendMouseButton(cmd.button, pressed = true)
+        is GestureCommand.MouseButtonUp -> vm.sendMouseButton(cmd.button, pressed = false)
         is GestureCommand.Wheel -> vm.sendWheel(cmd.notches)
     }
 }

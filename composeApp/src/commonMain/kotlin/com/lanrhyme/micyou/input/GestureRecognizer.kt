@@ -9,26 +9,38 @@ import kotlin.math.hypot
  * 上层 UI 把指针事件平铺成 [PointerEvent]、调用 [onEvent]，
  * 收到 [GestureCommand] 后通过 RemoteInputViewModel 发出去。
  *
- * 阈值：tap < 150ms 且位移 < tapSlop；longPress ≥ 500ms；
- * 双击窗口 250ms；滚轮每 wheelStep 像素 = 1 notch。
+ * 当前手势：
+ * - 单指轻点    → 左键
+ * - 单指双击    → 左键双击
+ * - 单指拖拽    → 鼠标移动
+ * - 单指长按    → 进入拖动模式（按住左键直到松开）
+ * - 双指轻点    → 右键
+ * - 双指竖滑    → 滚轮（上滑=页面向下；自然滚动方向）
+ * - 三指轻点    → 中键
  */
 class GestureRecognizer(
-    private val tapMaxMillis: Long = 150L,
+    private val tapMaxMillis: Long = 200L,
     private val longPressMillis: Long = 500L,
     private val doubleTapWindowMillis: Long = 250L,
     private val tapSlop: Float = 8f,
     private val wheelStep: Float = 60f
 ) {
-    private val pointers = HashMap<Long, PointerInfo>()
+    private val pointers = LinkedHashMap<Long, PointerInfo>()
     private var lastTapUpTime = 0L
     private var pendingDoubleTap = false
-    private var longPressFired = false
     private var primaryPointerId: Long? = null
     private var twoFingerY: Float? = null
     private var wheelAccumulator: Float = 0f
     private var threeFingerCandidate = false
-    private var threeFingerActiveTime: Long = 0L
     private var consumeRemainingLifts = false
+
+    /** 单指长按进入"按住左键拖动"模式，直到该指松开 */
+    private var dragMode = false
+
+    /** 双指同时按下且双方都没显著位移、没触发滚动 → 双指 tap = 右键 */
+    private var twoFingerTapCandidate = false
+    /** 双指 tap 候选过程中是否产生过滚动事件，产生过即取消右键 */
+    private var twoFingerScrolled = false
 
     private data class PointerInfo(
         val downX: Float,
@@ -50,16 +62,20 @@ class GestureRecognizer(
 
     private fun handleDown(e: PointerEvent.Down, emit: (GestureCommand) -> Unit) {
         pointers[e.id] = PointerInfo(e.x, e.y, e.x, e.y, e.time)
-        if (pointers.size == 1) {
-            primaryPointerId = e.id
-            longPressFired = false
-        } else if (pointers.size == 2) {
-            // Two-finger gesture begins; reset wheel state
-            twoFingerY = pointers.values.map { it.lastY }.average().toFloat()
-            wheelAccumulator = 0f
-        } else if (pointers.size == 3) {
-            threeFingerCandidate = true
-            threeFingerActiveTime = e.time
+        when (pointers.size) {
+            1 -> {
+                primaryPointerId = e.id
+            }
+            2 -> {
+                twoFingerY = pointers.values.map { it.lastY }.average().toFloat()
+                wheelAccumulator = 0f
+                twoFingerTapCandidate = true
+                twoFingerScrolled = false
+            }
+            3 -> {
+                threeFingerCandidate = true
+                twoFingerTapCandidate = false
+            }
         }
     }
 
@@ -71,8 +87,8 @@ class GestureRecognizer(
         info.lastY = e.y
         if (hypot((e.x - info.downX).toDouble(), (e.y - info.downY).toDouble()) > tapSlop) {
             info.moved = true
-            // Drag → cancel any pending three-finger / double-tap
             threeFingerCandidate = false
+            twoFingerTapCandidate = false
         }
         when (pointers.size) {
             1 -> {
@@ -87,9 +103,12 @@ class GestureRecognizer(
                 wheelAccumulator += delta
                 twoFingerY = avgY
                 while (abs(wheelAccumulator) >= wheelStep) {
-                    val notches = if (wheelAccumulator > 0) -1 else 1 // 上滑→正方向（向上滚）
+                    // 自然滚动：finger 上滑 (avgY 减小) → 页面向下 → wheel 向下 → notches 负
+                    val notches = if (wheelAccumulator > 0) 1 else -1
                     emit(GestureCommand.Wheel(notches))
                     wheelAccumulator -= wheelStep * (if (wheelAccumulator > 0) 1f else -1f)
+                    twoFingerScrolled = true
+                    twoFingerTapCandidate = false
                 }
             }
         }
@@ -106,23 +125,52 @@ class GestureRecognizer(
             return
         }
 
+        // 三指 tap：第一指抬起且无移动 → 中键，余下抬起忽略
         if (activeBeforeRelease == 3 && threeFingerCandidate && !moved) {
             emit(GestureCommand.MouseClick(MouseButton.MIDDLE))
             threeFingerCandidate = false
+            twoFingerTapCandidate = false
             consumeRemainingLifts = pointers.isNotEmpty()
             twoFingerY = null
             wheelAccumulator = 0f
             return
         }
-        if (activeBeforeRelease >= 2) {
+
+        // 双指释放路径
+        if (activeBeforeRelease == 2) {
+            // 第一指抬起：如果是两指快速 tap (无显著移动、无滚动) → 右键，并消费第二指
+            if (twoFingerTapCandidate && !twoFingerScrolled && !moved && dur < tapMaxMillis) {
+                val otherStillBrief = pointers.values.firstOrNull()?.let { other ->
+                    !other.moved && (e.time - other.downTime) < tapMaxMillis * 2
+                } ?: false
+                if (otherStillBrief || pointers.isEmpty()) {
+                    emit(GestureCommand.MouseClick(MouseButton.RIGHT))
+                    twoFingerTapCandidate = false
+                    consumeRemainingLifts = pointers.isNotEmpty()
+                    twoFingerY = null
+                    wheelAccumulator = 0f
+                    return
+                }
+            }
+            twoFingerTapCandidate = false
             twoFingerY = null
             wheelAccumulator = 0f
             return
         }
+        if (activeBeforeRelease > 2) {
+            // 多指松到 2 指中间状态，不发命令
+            return
+        }
 
-        // Single-finger release
+        // 单指释放
         primaryPointerId = null
-        if (longPressFired) return // long-press already emitted right click
+
+        if (dragMode) {
+            emit(GestureCommand.MouseButtonUp(MouseButton.LEFT))
+            dragMode = false
+            pendingDoubleTap = false
+            return
+        }
 
         if (!moved && dur < tapMaxMillis) {
             val now = e.time
@@ -141,12 +189,14 @@ class GestureRecognizer(
     }
 
     private fun handleTick(e: PointerEvent.Tick, emit: (GestureCommand) -> Unit) {
-        // Long-press detection: while a single pointer is held without much movement.
+        // 单指长按 → 进入拖动：按住左键，后续 Move 仍发 MouseMove
         val pid = primaryPointerId ?: return
         val info = pointers[pid] ?: return
-        if (!longPressFired && !info.moved && pointers.size == 1 && (e.time - info.downTime) >= longPressMillis) {
-            longPressFired = true
-            emit(GestureCommand.MouseClick(MouseButton.RIGHT))
+        if (!dragMode && !info.moved && pointers.size == 1 &&
+            (e.time - info.downTime) >= longPressMillis
+        ) {
+            dragMode = true
+            emit(GestureCommand.MouseButtonDown(MouseButton.LEFT))
         }
     }
 }
@@ -163,5 +213,7 @@ sealed class GestureCommand {
     data class MouseMove(val dx: Int, val dy: Int) : GestureCommand()
     data class MouseClick(val button: Int) : GestureCommand()
     data class MouseDoubleClick(val button: Int) : GestureCommand()
+    data class MouseButtonDown(val button: Int) : GestureCommand()
+    data class MouseButtonUp(val button: Int) : GestureCommand()
     data class Wheel(val notches: Int) : GestureCommand()
 }
