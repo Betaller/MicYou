@@ -446,4 +446,8 @@
     <string name="remoteControlConnectionDisconnected">未连接</string>
     <string name="remoteControlSensitivityLabel">灵敏度</string>
     <string name="remoteControlTouchpadHint">拖拽移动 · 点按左键 · 长按右键 · 双指滚动 · 三指中键</string>
+    <string name="remoteControlKeyboardOpen">打开键盘</string>
+    <string name="remoteControlKeyboardClose">收起键盘</string>
+    <string name="remoteControlKeyboardHint">输入即同步到电脑，退格键删除一个字符</string>
+    <string name="remoteControlPhysicalKeysLabel">修饰键与功能键</string>
 </resources>

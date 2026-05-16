@@ -446,4 +446,8 @@
     <string name="remoteControlConnectionDisconnected">Disconnected</string>
     <string name="remoteControlSensitivityLabel">Sensitivity</string>
     <string name="remoteControlTouchpadHint">Drag · tap · long-press · two-finger scroll · three-finger middle</string>
+    <string name="remoteControlKeyboardOpen">Open keyboard</string>
+    <string name="remoteControlKeyboardClose">Hide keyboard</string>
+    <string name="remoteControlKeyboardHint">Type to send to the remote PC. Backspace deletes one character.</string>
+    <string name="remoteControlPhysicalKeysLabel">Modifier &amp; function keys</string>
 </resources>
