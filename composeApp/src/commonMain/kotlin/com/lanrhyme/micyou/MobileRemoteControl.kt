@@ -43,6 +43,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.KeyboardHide
 import androidx.compose.ui.focus.FocusRequester
@@ -72,16 +73,24 @@ import micyou.composeapp.generated.resources.remoteControlTitle
 import micyou.composeapp.generated.resources.remoteControlTouchpadHint
 
 @Composable
-fun MobileRemoteControlScreen(viewModel: RemoteInputViewModel) {
+fun MobileRemoteControlScreen(viewModel: RemoteInputViewModel, onBack: () -> Unit = {}) {
     val connection by viewModel.connectionState.collectAsState()
     var sensitivity by remember { mutableStateOf(1.0f) }
 
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
         Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
-            Text(
-                text = stringResource(Res.string.remoteControlTitle),
-                style = MaterialTheme.typography.titleLarge
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = null
+                    )
+                }
+                Text(
+                    text = stringResource(Res.string.remoteControlTitle),
+                    style = MaterialTheme.typography.titleLarge
+                )
+            }
             Spacer(Modifier.height(4.dp))
             Text(
                 text = when (connection) {

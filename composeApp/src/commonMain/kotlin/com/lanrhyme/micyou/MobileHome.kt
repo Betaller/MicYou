@@ -40,6 +40,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.LinkOff
+import androidx.compose.material.icons.filled.Mouse
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Dns
@@ -118,11 +119,15 @@ fun MobileHome(viewModel: MainViewModel) {
     val forcePureBlackBackground = state.oledPureBlack && isDarkTheme
     
     var showSettings by remember { mutableStateOf(false) }
+    var showRemoteControl by remember { mutableStateOf(false) }
     var contentVisible by remember { mutableStateOf(false) }
 
     // Handle Android system back gesture to close settings page (no-op on desktop)
     BackHandlerCompat(enabled = showSettings) {
         showSettings = false
+    }
+    BackHandlerCompat(enabled = showRemoteControl) {
+        showRemoteControl = false
     }
     val hazeState = if (state.backgroundSettings.enableHazeEffect && state.backgroundSettings.hasCustomBackground) {
         rememberHazeState()
@@ -219,7 +224,31 @@ fun MobileHome(viewModel: MainViewModel) {
                         state = state,
                         viewModel = viewModel,
                                                 cardOpacity = state.backgroundSettings.cardOpacity,
-                        hazeState = hazeState
+                        hazeState = hazeState,
+                        onOpenRemoteControl = { showRemoteControl = true }
+                    )
+                }
+            }
+            // Remote control page overlay
+            AnimatedVisibility(
+                visible = showRemoteControl,
+                enter = slideInHorizontally(
+                    initialOffsetX = { it },
+                    animationSpec = tween(360, easing = EasingFunctions.EaseOutExpo)
+                ) + fadeIn(animationSpec = tween(240)),
+                exit = slideOutHorizontally(
+                    targetOffsetX = { it },
+                    animationSpec = tween(300, easing = EasingFunctions.EaseInOutExpo)
+                ) + fadeOut(animationSpec = tween(200))
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    shadowElevation = 0.dp,
+                    tonalElevation = 0.dp
+                ) {
+                    MobileRemoteControlScreen(
+                        viewModel = viewModel.remoteInput,
+                        onBack = { showRemoteControl = false }
                     )
                 }
             }
@@ -723,7 +752,8 @@ private fun MobileBottomBar(
     state: AppUiState,
     viewModel: MainViewModel,
     cardOpacity: Float = 1f,
-    hazeState: HazeState? = null
+    hazeState: HazeState? = null,
+    onOpenRemoteControl: () -> Unit = {}
 ) {
     var showPluginPopup by remember { mutableStateOf(false) }
     var activePluginWindow by remember { mutableStateOf<String?>(null) }
@@ -786,6 +816,25 @@ private fun MobileBottomBar(
                                 color = pluginContentColor
                             )
                         }
+                    }
+                }
+
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    modifier = Modifier.clickable { onOpenRemoteControl() }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            Icons.Filled.Mouse,
+                            contentDescription = stringResource(Res.string.remoteControlTitle),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
             }
