@@ -442,4 +442,8 @@
     <string name="equalizerBrightVocalPreset">Bright Vocal</string>
     <string name="equalizerDeepVoicePreset">Deep Voice</string>
     <string name="equalizerPodcastPreset">Podcast</string>
+    <string name="remoteControlTitle">Remote Input</string>
+    <string name="remoteControlConnectionDisconnected">Disconnected</string>
+    <string name="remoteControlSensitivityLabel">Sensitivity</string>
+    <string name="remoteControlTouchpadHint">Drag · tap · long-press · two-finger scroll · three-finger middle</string>
 </resources>

@@ -442,4 +442,8 @@
     <string name="realTimeSpectrumLabel">实时频谱（原始 vs 处理后）喵~ 📈</string>
     <string name="webModeDesc">启动 HTTPS + WebSocket 服务喵~支持手机浏览器麦克风输入喵~</string>
     <string name="webUrlLabel">Web 地址喵~</string>
+    <string name="remoteControlTitle">远程键鼠喵~</string>
+    <string name="remoteControlConnectionDisconnected">还没连上喵~</string>
+    <string name="remoteControlSensitivityLabel">灵敏度喵~</string>
+    <string name="remoteControlTouchpadHint">拖拽移动喵~点按左键喵~长按右键喵~双指滚动喵~三指中键喵~</string>
 </resources>

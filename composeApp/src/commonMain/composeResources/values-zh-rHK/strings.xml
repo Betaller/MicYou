@@ -442,4 +442,8 @@
     <string name="realTimeSpectrumLabel">即時頻譜 (原始 vs 處理後)</string>
     <string name="webModeDesc">啟動 HTTPS + WebSocket 伺服器，支援手機瀏覽器麥克風輸入</string>
     <string name="webUrlLabel">Web 網址</string>
+    <string name="remoteControlTitle">遠端鍵鼠</string>
+    <string name="remoteControlConnectionDisconnected">未連接</string>
+    <string name="remoteControlSensitivityLabel">靈敏度</string>
+    <string name="remoteControlTouchpadHint">拖拽移動 · 點按左鍵 · 長按右鍵 · 雙指捲動 · 三指中鍵</string>
     </resources>
