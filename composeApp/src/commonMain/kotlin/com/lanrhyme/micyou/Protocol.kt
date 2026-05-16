@@ -120,8 +120,80 @@ fun calculateUdpPort(tcpPort: Int): Int {
 
 /** 判断 MessageWrapper 是否包含控制消息（应通过 TCP 发送） */
 fun MessageWrapper.hasControlMessage(): Boolean {
-    return connect != null || mute != null || pluginSync != null || ping != null || pong != null
+    return connect != null || mute != null || pluginSync != null || ping != null || pong != null ||
+            mouse != null || key != null || inputAuth != null
 }
+
+/** 鼠标事件类型常量。Protobuf 用整数序列化，避免枚举的 wire format 假设。 */
+object MouseEventType {
+    const val MOVE_RELATIVE = 0
+    const val BUTTON_DOWN = 1
+    const val BUTTON_UP = 2
+    const val WHEEL = 3
+    const val MOVE_ABSOLUTE = 4
+}
+
+object MouseButton {
+    const val LEFT = 1
+    const val RIGHT = 2
+    const val MIDDLE = 3
+}
+
+object KeyEventType {
+    const val KEY_DOWN = 0
+    const val KEY_UP = 1
+    const val TEXT = 2
+}
+
+/** 修饰键 bitmask；与 Win32 VK 修饰位语义对齐但定义在 commonMain 保持平台中立 */
+object ModifierMask {
+    const val NONE = 0
+    const val SHIFT = 1 shl 0
+    const val CTRL = 1 shl 1
+    const val ALT = 1 shl 2
+    const val META = 1 shl 3 // Win / Cmd
+}
+
+@OptIn(ExperimentalSerializationApi::class)
+@Serializable
+data class MouseEventMessage(
+    @ProtoNumber(1)
+    val type: Int,
+    @ProtoNumber(2)
+    val dx: Int = 0,
+    @ProtoNumber(3)
+    val dy: Int = 0,
+    @ProtoNumber(4)
+    val button: Int = 0,
+    @ProtoNumber(5)
+    val wheelDelta: Int = 0
+)
+
+@OptIn(ExperimentalSerializationApi::class)
+@Serializable
+data class KeyEventMessage(
+    @ProtoNumber(1)
+    val type: Int,
+    @ProtoNumber(2)
+    val keyCode: Int = 0,
+    @ProtoNumber(3)
+    val modifiers: Int = 0,
+    @ProtoNumber(4)
+    val text: String? = null
+)
+
+@OptIn(ExperimentalSerializationApi::class)
+@Serializable
+data class InputAuthMessage(
+    @ProtoNumber(1)
+    val pin: String? = null,
+    @ProtoNumber(2)
+    val token: String? = null,
+    @ProtoNumber(3)
+    val deviceFingerprint: String? = null,
+    @ProtoNumber(4)
+    val deviceName: String? = null
+)
 
 @OptIn(ExperimentalSerializationApi::class)
 @Serializable
@@ -137,6 +209,12 @@ data class MessageWrapper(
     @ProtoNumber(5)
     val ping: PingMessage? = null,
     @ProtoNumber(6)
-    val pong: PongMessage? = null
+    val pong: PongMessage? = null,
+    @ProtoNumber(7)
+    val mouse: MouseEventMessage? = null,
+    @ProtoNumber(8)
+    val key: KeyEventMessage? = null,
+    @ProtoNumber(9)
+    val inputAuth: InputAuthMessage? = null
 )
 
